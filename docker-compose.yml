@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: flask_db
+    restart: always
+    environment:
+      POSTGRES_USER: tu_usuario
+      POSTGRES_PASSWORD: tu_password_seguro
+      POSTGRES_DB: mi_base_datos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: flask_redis
+    restart: always
+    networks:
+      - backend_net
+
+  app:
+    build: ./app
+    container_name: flask_app
+    restart: always
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://tu_usuario://tu_password_seguro@db:5432/mi_base_datos
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - backend_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - backend_net
+
+volumes:
+  postgres_data:
+
+networks:
+  backend_net:
+    driver: bridge
